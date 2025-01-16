@@ -10,12 +10,12 @@ def get_number(text):
     number = 0
     while notError:
         try:
-            number = float(input(text))
-            notError = False
-        except e:
-            print("enter a number")
-            notError = True
+            number = float(input(text))  
+            notError = False            
+        except ValueError as e:         
+            print(f"Enter a valid number. Error: {e}")
     return number
+
 
 
 print(get_number("Esto es una prueba "))
