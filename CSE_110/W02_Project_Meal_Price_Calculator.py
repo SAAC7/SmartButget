@@ -1,3 +1,11 @@
+text = (
+    f"------------------------------------------------------------------"
+    f"\n\t\tWelcome to the Price Calculator\n"
+    f"This Program will help you to know the total price of your meal.\n"
+    f"\t\tJust enter the following information\n"
+    f"------------------------------------------------------------------"
+)
+print(text)
 def get_number(text,tipo):
     notError = True
     number = 0
