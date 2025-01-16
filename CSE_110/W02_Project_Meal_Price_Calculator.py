@@ -10,4 +10,4 @@ Sales Tax: $2.16
 Total: $38.16
 
 payment=input("What is the payment amount?")
-Change: $1.84
+Change: $1.84z
