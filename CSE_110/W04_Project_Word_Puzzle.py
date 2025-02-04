@@ -21,6 +21,7 @@ def word_guessing_game():
     guess_count = 0
     correct_guess = False
     print("Welcome to the word guessing game!\nIn this game you can play without any problem because this game has code to avoid any problem.\n")
+    print(f"Your initial hint is {'_ '*len(hidden_word)}\n")
 
     while not correct_guess:
         guess = input("What is your guess? ").lower()
