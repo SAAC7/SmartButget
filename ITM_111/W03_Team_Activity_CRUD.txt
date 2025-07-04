@@ -1,0 +1,68 @@
+W09 Team Activity: CRUD in Practice
+Team Members:Saúl Abraham Arana Calderón
+
+1. Add a New Artist to the System
+
+* Purpose of Statement: Add a new artist to the database so their artworks can be linked and displayed.
+* Type of SQL Statement: `INSERT`
+* Required Data:
+  * `firstName` (VARCHAR)
+  * `lastName` (VARCHAR)
+  * `birthYear` (INT)
+  * `deathYear` (INT, optional)
+  * `nationality` (VARCHAR)
+  
+* Returned Data:
+  * Auto-generated `artistID` (may be used for future inserts or linking)
+
+```sql
+INSERT INTO artist (firstName, lastName, birthYear, deathYear, nationality)
+VALUES ('Frida', 'Kahlo', 1907, 1954, 'Mexican');
+```
+
+2. Edit an Existing Painting’s Information
+
+* Purpose of Statement: Update the details of an artwork in the database (e.g., fix a typo, change year, etc.)
+* Type of SQL Statement: `UPDATE`
+* Required Data:
+  * `artworkID` (INT, unique identifier)
+  * Fields to update such as `title`, `year`, `medium`, etc.
+  
+* Returned Data:
+  * None (system just confirms success/failure)
+
+```sql
+UPDATE artwork
+SET title = 'The Two Fridas', year = 1939, medium = 'Oil on canvas'
+WHERE artworkID = 12;
+```
+
+3. Delete a Keyword from the System
+* Purpose of Statement: Remove a keyword no longer relevant to any artwork or used in classification.
+* Type of SQL Statement: `DELETE`
+* Required Data:
+  * `keywordID` or `keyword` (VARCHAR)
+  
+* Returned Data:
+  * None (system shows confirmation prompt before action)
+
+```sql
+DELETE FROM keyword
+WHERE keyword = 'Cubism';
+```
+
+4. Retrieve All Paintings by a Specific Artist
+* Purpose of Statement: Display a list of all paintings created by a specific artist in the virtual gallery.
+* Type of SQL Statement: `SELECT`
+* Required Data:
+  * `artistID` or `artistLastName` (VARCHAR or INT)
+  
+* Returned Data:
+  * `title`, `year`, `medium`, `imageURL`, `description`
+
+```sql
+SELECT a.title, a.year, a.medium, a.imageURL, a.description
+FROM artwork a
+JOIN artist ar ON a.artistID = ar.artistID
+WHERE ar.lastName = 'Kahlo';
+```
