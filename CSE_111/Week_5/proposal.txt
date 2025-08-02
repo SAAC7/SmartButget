@@ -1,0 +1,65 @@
+CSE 111 Proposal for a Student Chosen Program
+
+    (This is a proposal. All proposals are written with our best
+    knowledge at the beginning of a project. As we progress from the
+    beginning to the end of a project, we gain more knowledge, and we
+    change some of our proposed ideas. This is part of completing any
+    project and is fine.  However, we still must write a proposal so
+    that our teachers or supervisors know what we intend to do. Please
+    answer each of the following questions to the best of your
+    knowledge.)
+
+1. What is the title of your program?
+
+“SmartBudget: Your Income with Purpose”
+
+2. What real-world problem will your program address or help to solve?
+
+This program will help people manage their money in a balanced way, automatically distributing their income into key categories: growth, stability, essentials, and rewards. This encourages healthy, sustainable, and purposeful financial habits.
+It is based on advice from Mark Tilbury.
+
+3. What will you learn from developing this program?
+
+I will learn to:
+*Organize a program into reusable functions.
+*Use files to save and read data (csv).
+*Test functions with pytest.
+*Apply financial control principles through programming.
+
+4. What Python modules will your program use?
+
+csv (save income and expenses)
+datetime (record dates)
+pytest (test functions)
+os (check if files exist)
+typing (optional typing for clarity)
+
+5. List the names of functions you will need?
+
+    (Remember that the most reusable functions don't get user input and
+    don't print results but instead have parameters and return a result.
+    Functions that get user input and print results are important and do
+    useful work but are not easily reusable.)
+
+register_income(amount: float) -> dict
+register_expense(amount: float, category: str, description: str) -> dict
+calculate_allocations(income: float) -> dict
+validate_expense(category: str, amount: float, allocations: dict) -> bool
+save_entry(entry: dict, filename: str)
+load_entries(filename: str) -> list[dict]
+summarize_budget(entries: list[dict]) -> dict
+print_summary(summary: dict)
+main()
+
+    (Remember also that it's hard to test functions that get user input
+    and print results. It's easy to test functions that don't get user
+    input and don't print results but instead have parameters and return
+    a result. Therefore, you should write most of your program functions
+    to have parameters and return a result.)
+
+6. List the names of the test functions you will write.
+
+test_calculate_allocations()
+test_validate_expense()
+
+
