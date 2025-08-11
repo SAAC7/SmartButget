@@ -47,5 +47,46 @@ def save_dictionary(entries: Dict, filename: str = FILENAME):
             writer.writeheader()
         writer.writerow(entries)
 
-def register_income(amount:float,category:str,description:str) -> Dict:
-    pass
+def record_transaction(date_isoformat:str,income:bool,category:str,description:str,amount:float) -> Dict:
+    """
+    Create a transaction record.
+
+    Parameters:
+        date_isoformat (str): Date in ISO 8601 format.
+        income (bool): True if it's an income, False if it's an expense.
+        category (str): Transaction category.
+        description (str): Description of the transaction.
+        amount (float): Transaction amount.
+
+    Returns:
+        dict: A dictionary representing the transaction.
+    """
+    return{
+        'Date': date_isoformat,
+        'Type': 'Income' if income else 'Expense',
+        'Category': category,
+        'Description': description,
+        'Amount': amount
+    }
+
+def enter_date() -> str:
+    """
+    Ask the user for a date in MM-DD-YY format and optionally time in HH:MM.
+    """
+    date_input = input("Enter date (MM-DD-YY) and optionally time (HH:MM): ")
+    if len(date_input.strip().split()) == 2:
+        date_str, time_str = date_input.strip().split()
+        datetime_format = datetime.strptime(f"{date_str} {time_str}", "%m-%d-%y %H:%M")
+    else:
+        datetime_format = datetime.strptime(date_input.strip(), "%m-%d-%y")
+    return datetime_format.isoformat()
+
+def filter_transactio(entries:List[Dict],year:int=None,month:int=None,day:int=None)->List[Dict]:
+    """
+    This filter filters transactions for a specific date.
+    """
+    return [entries_filter for entries_filter in entries if (
+        (year is None or int(entries_filter['Date'][:4])==year) and
+        (month is None or int(entries_filter['Date'][5:7])==month) and
+        (day is None or int(entries_filter['Date'][8:10])==day)
+    )]
