@@ -6,10 +6,22 @@ from typing import List, Dict
 
 FILENAME = "SmartBudget.csv"
 CATEGORIES = {
-    'Growth':[0.25,"The 25% that works for you!"],
-    'Stability':[0.15,"THAT KEPPS YOU IN THE GAME!"],
-    'Essential':[0.5,"The 50% that feed you, not tour ego!"],
-    'Reward':[0.1,"The 10% that keeps you sane!"]
+    'Growth':{
+       'Rate': 0.25,
+       'Phrase':"The 25% that works for you!"
+       },
+    'Stability':{
+        'Rate':0.15,
+        'Phrase': "THAT KEPPS YOU IN THE GAME!"
+        },
+    'Essential':{
+        'Rate':0.5,
+        'Phrase':"The 50% that feed you, not tour ego!"
+        },
+    'Reward':{
+        'Rate':0.1,
+        'Phrase':"The 10% that keeps you sane!"
+        }
 }
 
 def read_dictionary(filename: str = FILENAME) -> List[Dict]:
@@ -34,3 +46,6 @@ def save_dictionary(entries: Dict, filename: str = FILENAME):
         if not file_exists:
             writer.writeheader()
         writer.writerow(entries)
+
+def register_income(amount:float,category:str,description:str) -> Dict:
+    pass
