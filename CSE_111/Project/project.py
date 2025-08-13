@@ -24,10 +24,10 @@ CATEGORIES_EXPENSE = {
         }
 }
 CATEGORIES_INCOME = {
-    'Employment Income':'Salary, wages, bonuses, commissions',
-    'Business / Self-Employment Income':'Product sales, service fees',
-    'Investment & Passive Income':'Rentals, dividends, interest, royalties',
-    'Other Income':'Gifts, inheritances, asset sales, prizes'
+    'Employment Income':{'Phrase':'Salary, wages, bonuses, commissions'},
+    'Business / Self-Employment Income':{'Phrase':'Product sales, service fees'},
+    'Investment & Passive Income':{'Phrase':'Rentals, dividends, interest, royalties'},
+    'Other Income':{'Phrase':'Gifts, inheritances, asset sales, prizes'}
 }
 
 def read_dictionary(filename: str = FILENAME) -> List[Dict]:
@@ -85,13 +85,13 @@ def record_transaction(date_isoformat:str,income:bool,category:str,description:s
 
 def enter_date() -> str:
     while True:
-        date_input = input("Enter date (MM-DD-YY) and optionally time (HH:MM): ").strip()
+        date_input = input("Enter date (MM-DD-YYYY) and optionally time (HH:MM): ").strip()
         try:
             if len(date_input.split()) == 2:
                 date_str, time_str = date_input.split()
-                datetime_format = datetime.strptime(f"{date_str} {time_str}", "%m-%d-%y %H:%M")
+                datetime_format = datetime.strptime(f"{date_str} {time_str}", "%m-%d-%Y %H:%M")
             else:
-                datetime_format = datetime.strptime(date_input, "%m-%d-%y")
+                datetime_format = datetime.strptime(date_input, "%m-%d-%Y")
             return datetime_format.isoformat()
         except ValueError:
             print("Invalid date/time format. Please try again.")
@@ -120,7 +120,7 @@ def filter_transactio(entries:List[Dict],year:int=None,month:int=None,day:int=No
 
 def choose_categories(categories:Dict)->str:
     for i, cat in enumerate(categories.keys(),start=1):
-        print(f"{i}. {cat}: {categories[cat]["Phrase"]}")
+        print(f"{i}. {cat}: {categories[cat]['Phrase']}")
     while True:
         try:
             seleccion = int(input("Select a category (number):"))
@@ -152,7 +152,7 @@ def registrar_transaccion(is_income: bool, entries: List[Dict]):
 
 
 
-def generar_resumen(entries: List[Dict], year: int, month: int) -> Dict[str, float]:
+def generate_summary(entries: List[Dict], year: int, month: int) -> Dict[str, float]:
     """
     Genera un diccionario con resumen total ingresos y gastos por categoría,
     además de las asignaciones ideales para ese mes y año.
@@ -175,16 +175,19 @@ def print_summary(summary: Dict[str, float]) -> None:
     """
     Muestra el resumen en pantalla con notificaciones de excedentes.
     """
-    print(f"\n{'--- Budget Summary ---':^51}")
-    print(f"Total: {summary['Total Encome']:^12.2f}/{summary['Total Income']:^12.2f}\n")
+    print(f"\n{'--- Budget Summary ---':^75}")
+    subtitle = f'Total: {summary['Total Encome']:^12.2f}/{summary['Total Income']:^12.2f} | {summary['Total Income']-summary['Total Encome']:^12.2f}\n'
+    print(f"{subtitle:^75}")
     for cat in CATEGORIES_EXPENSE.keys():
         spent = summary[cat]
         alloc = summary[f'Alloc_{cat}']
         status = ''
         if spent > alloc:
-            status = f" (Exceeded {spent - alloc:.2f})"
+            status = f" ({'Exceeded':<10} {alloc - spent:>10.2f})"
+        else:
+            status = f" ({'Under':<10} {alloc-spent:>10.2f})"
         print(f"{cat:<10}: Spent {spent:>10.2f} / Allocated {alloc:>10.2f}{status}")
-    print(f"{'-'*51}\n")
+    print(f"{'-'*75}\n")
 
 def print_detailed_transactions(entries: List[Dict], year: int = None, month: int = None, day: int = None) -> None:
     transacciones = filter_transactio(entries, year=year, month=month, day=day)
@@ -241,7 +244,7 @@ def show_filtered_transactions(entries: List[Dict]):
 def main():
     entries = read_dictionary()
     while True:
-        print("\nMenú SmartBudget:\n1) Record Income\n2) Record Expense\n3) Ver resumen\n4) Special Filter\n5) Salir")
+        print("\nMenú SmartBudget:\n1) Record Income\n2) Record Expense\n3) Summary\n4) Special Filter\n5) Salir")
         choice = input("Choose an option: ")
         if choice == '1':
             registrar_transaccion(True, entries)
@@ -258,7 +261,7 @@ def main():
                         print("Month must be between 1 and 12.")
                 except Exception:
                     print("Invalid format. Please enter as yyyy-mm.")
-            summary = generar_resumen(entries, year, month)
+            summary = generate_summary(entries, year, month)
             print_summary(summary)
             print_detailed_transactions(entries,year, month)
         elif choice == '4':
