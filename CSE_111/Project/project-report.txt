@@ -24,6 +24,18 @@ doing any of the following:
 =============Example====================
 
 
+Time Spent
+Date       (hours)   Description of Work
+----------  ----------  -------------------------
+2025-08-11     2.0     Added and adjusted categories; implemented income registration (commit 1db90b0). Designed program structure and initial manual tests.
+2025-08-11     2.0     Added additional functions and refactored helpers (commit b00a69d). Development and manual integration testing.
+2025-08-12     3.0     Completed core project functionality and main flow (commit aa33c09). Debugging and input validation.
+2025-08-13     2.5     Fixed problems and exercised the app; iterative bug fixes (commit 5b28dc4). CSV handling and logic adjustments.
+2025-08-13     3.0     Finalized project code and wrote pytest tests (commit c8f98c8). Automated tests and final polishing.
+
+
+
+
 
 2. In Canvas, submit this completed text file, your Python program, your
 Python test file, and any project data files such as .txt and .csv files and
