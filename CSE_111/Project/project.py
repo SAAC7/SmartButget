@@ -31,6 +31,9 @@ CATEGORIES_INCOME = {
 }
 
 def read_dictionary(filename: str = FILENAME) -> List[Dict]:
+    """
+    This read the csv document to get the database of transaction
+    """
     entries = []
     if not os.path.isfile(filename):
         return entries
@@ -50,6 +53,9 @@ def read_dictionary(filename: str = FILENAME) -> List[Dict]:
 
 
 def save_dictionary(entries: Dict, filename: str = FILENAME):
+    """
+    This save the diccionary of a transaction
+    """
     file_exists = os.path.isfile(filename)
     try:
         with open(filename, "a") as csv_file:
@@ -84,6 +90,9 @@ def record_transaction(date_isoformat:str,income:bool,category:str,description:s
     }
 
 def enter_date() -> str:
+    """
+    This Helps to get a date and convert to the format
+    """
     while True:
         date_input = input("Enter date (MM-DD-YYYY) and optionally time (HH:MM): ").strip()
         try:
@@ -98,6 +107,9 @@ def enter_date() -> str:
 
 
 def choose_date_or_now() -> str:
+    """
+    This helps to choose beetween now or other date
+    """
     while True:
         choice = input("Use current date and time? (y/n): ").strip().lower()
         if choice == "y":
@@ -108,7 +120,7 @@ def choose_date_or_now() -> str:
             print("Invalid input, please enter 'y' or 'n'.")
 
 
-def filter_transactio(entries:List[Dict],year:int=None,month:int=None,day:int=None)->List[Dict]:
+def filter_transaction(entries:List[Dict],year:int=None,month:int=None,day:int=None)->List[Dict]:
     """
     This filter filters transactions for a specific date.
     """
@@ -119,6 +131,9 @@ def filter_transactio(entries:List[Dict],year:int=None,month:int=None,day:int=No
     )]
 
 def choose_categories(categories:Dict)->str:
+    """
+    This return the string name of the category, and only need to choose the number of the category
+    """
     for i, cat in enumerate(categories.keys(),start=1):
         print(f"{i}. {cat}: {categories[cat]['Phrase']}")
     while True:
@@ -157,11 +172,11 @@ def generate_summary(entries: List[Dict], year: int, month: int) -> Dict[str, fl
     Genera un diccionario con resumen total ingresos y gastos por categoría,
     además de las asignaciones ideales para ese mes y año.
     """
-    transacciones = filter_transactio(entries, year=year, month=month)
+    transacciones = filter_transaction(entries, year=year, month=month)
     total_income = sum(t['Amount'] for t in transacciones if t['Type'] == 'Income')
     total_expense = sum(t['Amount'] for t in transacciones if t['Type'] == 'Expense')
     
-    resumen = {'Total Income': total_income,'Total Encome':total_expense}
+    resumen = {'Total Income': total_income,'Total Expenses':total_expense}
     
     for cat in CATEGORIES_EXPENSE.keys():
         gasto_cat = sum(t['Amount'] for t in transacciones if t['Type'] == 'Expense' and t['Category'] == cat)
@@ -176,7 +191,7 @@ def print_summary(summary: Dict[str, float]) -> None:
     Muestra el resumen en pantalla con notificaciones de excedentes.
     """
     print(f"\n{'--- Budget Summary ---':^75}")
-    subtitle = f'Total: {summary['Total Encome']:^12.2f}/{summary['Total Income']:^12.2f} | {summary['Total Income']-summary['Total Encome']:^12.2f}\n'
+    subtitle = f'Total: {summary['Total Expenses']:^12.2f}/{summary['Total Income']:^12.2f} | {summary['Total Income']-summary['Total Expenses']:^12.2f}\n'
     print(f"{subtitle:^75}")
     for cat in CATEGORIES_EXPENSE.keys():
         spent = summary[cat]
@@ -190,7 +205,7 @@ def print_summary(summary: Dict[str, float]) -> None:
     print(f"{'-'*75}\n")
 
 def print_detailed_transactions(entries: List[Dict], year: int = None, month: int = None, day: int = None) -> None:
-    transacciones = filter_transactio(entries, year=year, month=month, day=day)
+    transacciones = filter_transaction(entries, year=year, month=month, day=day)
     if not transacciones:
         print("No transactions found for this period.\n")
         return
@@ -220,22 +235,17 @@ def show_filtered_transactions(entries: List[Dict]):
             year = int(input("Enter year (yyyy): "))
             if year < 1:
                 raise ValueError("Year must be positive.")
-
         elif choice == '2':
             year, month = map(int, input("Enter year and month (yyyy-mm): ").split("-"))
             if not (1 <= month <= 12):
                 raise ValueError("Month must be between 1 and 12.")
-
         elif choice == '3':
             year, month, day = map(int, input("Enter date (yyyy-mm-dd): ").split("-"))
             datetime(year, month, day)  # valida fecha real
-
         else:
             print("Invalid choice.")
             return
-
         print_detailed_transactions(entries, year=year, month=month, day=day)
-
     except ValueError as ve:
         print(f"Invalid input: {ve}")
     except Exception:
