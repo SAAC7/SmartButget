@@ -86,13 +86,15 @@ def add():
     tipo = request.form.get("type")
     categoria = request.form.get("category")
     desc = request.form.get("description")
+    date_str = request.form.get("date_in")
+    date_obj = datetime.fromisoformat(date_str).date()
     amount = request.form.get("amount")
     try:
         amount = float(amount)
     except:
         amount = 0
     save_csv({
-        'Date': datetime.now().isoformat(),
+        'Date': date_obj,
         'Type': tipo,
         'Category': categoria,
         'Description': desc,
@@ -163,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <form action="/add" method="post" class="mb-3">
   <div class="row g-2">
-    <div class="col-md-2">
+    <div class="col-md-1">
       <select name="type" class="form-select" required>
         <option value="Income">Income</option>
         <option value="Expense">Expense</option>
@@ -175,10 +177,14 @@ document.addEventListener("DOMContentLoaded", function() {
     <div class="col-md-3">
       <input type="text" name="description" placeholder="Description" class="form-control" required>
     </div>
+    
+    <div class="col-md-2">
+       <input type="date" name="date_in" class="form-control" required>
+    </div>
     <div class="col-md-2">
       <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
     </div>
-    <div class="col-md-2">
+    <div class="col-md-1">
       <button class="btn btn-primary w-100">Add</button>
     </div>
   </div>
