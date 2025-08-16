@@ -125,7 +125,7 @@ def account_balances():
     # Procesar transferencias
     for tr in query_db("SELECT * FROM Transfers", fetch=True):
         amt = tr["amount"] - tr["commission"]
-        balances[tr["from_account"]]["balance"] -= tr["amount"]
+        balances[tr["from_account"]]["balance"] -= amt
         balances[tr["to_account"]]["balance"] += amt * tr["exchange_rate"]
 
     return balances
@@ -136,6 +136,7 @@ def account_balances():
 @app.route("/")
 def index():
     resumen, rows = generate_summary(datetime.now().year, datetime.now().month)
+    print(resumen)
     balances = account_balances()
     return render_template_string(TEMPLATE,
                                   entries=rows,
@@ -182,6 +183,11 @@ def transfer():
     query_db("""INSERT INTO Transfers(from_account,to_account,amount,commission,exchange_rate,date,description)
                 VALUES(?,?,?,?,?,?,?)""",
              (from_acc, to_acc, amount, commission, rate, dt_obj.isoformat(), desc))
+    if commission>0:
+      query_db("""INSERT INTO Transactions(date,type,category,description,amount,account_id)
+                  VALUES(?,?,?,?,?,?)""",
+              (dt_obj.isoformat(), "Expense", "Essential",f"Transfer fee from Account_Id {from_acc} to Account_Id {to_acc}" , commission, from_acc))
+    
     return redirect("/")
 
 # --------------------------
@@ -230,14 +236,18 @@ document.addEventListener("DOMContentLoaded", function() {
 <body>
 <h1>SmartBudget DB</h1>
 
-<h2>Resumen mensual</h2>
-<p>Total Income: {{ resumen["Total Income"] }} | Total Expenses: {{ resumen["Total Expenses"] }}</p>
+
+{% for currency in resumen.keys() %}
+<h2>Resumen mensual {{resumen[currency]["Currency"]}}</h2>
+<p>Total Income: {{ resumen[currency]["Total Income"] }} | Total Expenses: {{ resumen[currency]["Total Expenses"] }}</p>
+{% endfor %}
 
 <h2>Balances de cuentas</h2>
 <table border="1">
-<tr><th>Cuenta</th><th>Banco</th><th>Moneda</th><th>Balance</th></tr>
+<tr><th>Id</th><th>Cuenta</th><th>Banco</th><th>Moneda</th><th>Balance</th></tr>
 {% for b in accounts %}
 <tr>
+<td>{{ b.account.id }}</td>
 <td>{{ b.account.account_number }}</td>
 <td>{{ b.account.bank_name }}</td>
 <td>{{ b.account.currency }}</td>
