@@ -86,15 +86,21 @@ def add():
     tipo = request.form.get("type")
     categoria = request.form.get("category")
     desc = request.form.get("description")
-    date_str = request.form.get("date_in")
-    date_obj = datetime.fromisoformat(date_str).date()
+    dt_str = request.form.get("date_in")  
+# Ejemplo: "2025-08-15T14:30"
+
+    dt_obj = datetime.fromisoformat(dt_str)  
+# dt_obj = datetime.datetime(2025, 8, 15, 14, 30)
+
+# Guardar como ISO completo en CSV/SQLite
+    moment = dt_obj.isoformat()  
     amount = request.form.get("amount")
     try:
         amount = float(amount)
     except:
         amount = 0
     save_csv({
-        'Date': date_obj,
+        'Date': moment,
         'Type': tipo,
         'Category': categoria,
         'Description': desc,
@@ -179,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function() {
     </div>
     
     <div class="col-md-2">
-       <input type="date" name="date_in" class="form-control" required>
+       <input type="datetime-local" name="date_in" class="form-control" required>
     </div>
     <div class="col-md-2">
       <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
