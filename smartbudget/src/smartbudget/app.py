@@ -24,7 +24,14 @@ def get_device_ip():
 
 
 class SmartBudget(toga.App):
+
     def startup(self):
+        try:
+            from .permissions import ensure_storage_permission
+            ensure_storage_permission()
+        except Exception:
+            # Android o jnius no disponible en PC/Debug
+            pass
         self.db_path = None  # no DB al iniciar
         self.port = DEFAULT_PORT
         self.host = "0.0.0.0"
