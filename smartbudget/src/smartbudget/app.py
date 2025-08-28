@@ -6,6 +6,9 @@ import toga
 from toga.style import Pack
 from toga.style.pack import COLUMN
 from .server import create_app
+import os, sys
+
+
 
 DEFAULT_PORT = 5000
 
@@ -53,11 +56,16 @@ class SmartBudget(toga.App):
         )
 
         self.main_window.content = box
-        self.main_window.toolbar.add(
-            toga.Command(self.cmd_open_db, text="Open DB"),
-            toga.Command(self.cmd_new_db, text="Create DB"),
-            toga.Command(self.cmd_reload, text="Reload")
-        )
+        if sys.platform == "android":
+            self.main_window.toolbar.add(
+                toga.Command(self.open_db_android, text="Open DB")
+                )
+        else:
+            self.main_window.toolbar.add(
+                toga.Command(self.cmd_open_db, text="Open DB"),
+                toga.Command(self.cmd_new_db, text="Create DB"),
+                toga.Command(self.cmd_reload, text="Reload")
+                )
 
         self.main_window.show()
 
@@ -70,8 +78,18 @@ class SmartBudget(toga.App):
 
         t = threading.Thread(target=run, daemon=True)
         t.start()
+    async def open_db_android(self, widget):
+        base_dir = os.path.join(sys.path[0], "..", "files")
+        os.makedirs(base_dir, exist_ok=True)
+        db_file = os.path.join(base_dir, "SmartBudget.db")
+        self.db_path = Path(db_file)
+        self._start_flask(self.db_path)
+        self.status.text = f"DB: {self.db_path.name}  |  Servidor: http://{get_device_ip()}:{self.port}"
+        self.webview.url = f"http://127.0.0.1:{self.port}/"
 
+    
     async def cmd_open_db(self, widget):
+
         db_file = await self.main_window.open_file_dialog(
             title="Selecciona una base .db",
             multiple_select=False,

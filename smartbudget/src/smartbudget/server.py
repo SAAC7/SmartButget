@@ -158,6 +158,9 @@ def create_app(db_path:Path):
     def account_balances():
         accounts = query_db("SELECT * FROM Accounts", fetch=True)
         balances = {a["id"]: {"account": a, "balance": 0} for a in accounts}
+        balances_total = set(r["currency"] for r in accounts)
+        print(balances)
+
 
         # Procesar transacciones normales
         for t in query_db("SELECT * FROM Transactions", fetch=True):
@@ -172,21 +175,41 @@ def create_app(db_path:Path):
             balances[tr["from_account"]]["balance"] -= amt
             balances[tr["to_account"]]["balance"] += amt * tr["exchange_rate"]
 
-        return balances
+        totals_by_currency = {}
+        for b in balances.values():
+            cur = b["account"]["currency"]
+            totals_by_currency[cur] = totals_by_currency.get(cur, 0) + b["balance"]
+        
+        return balances, totals_by_currency
 
     # --------------------------
     # Rutas Flask
     # --------------------------
-    @app.route("/")
+    @app.route("/", methods=["GET"])
     def index():
-        resumen, rows = generate_summary(datetime.now().year, datetime.now().month)
-        balances = account_balances()
+        monthyear = request.args.get("monthyear")
+    
+        if monthyear:
+            # viene en formato "YYYY-MM", lo partimos
+            selected_year, selected_month = map(int, monthyear.split("-"))
+        else:
+            # por defecto, mes actual
+            now = datetime.now()
+            selected_year, selected_month = now.year, now.month
+            monthyear = f"{selected_year:04d}-{selected_month:02d}"
+
+        # Genera el resumen y balances
+        resumen, rows = generate_summary(selected_year, selected_month)
+        # resumen, rows = generate_summary(datetime.now().year, datetime.now().month)
+        balances,total_balances = account_balances()
         return render_template_string(TEMPLATE,
                                     entries=rows,
                                     resumen=resumen,
                                     accounts=balances.values(),
+                                    accounts_total=total_balances,
                                     CATEGORIES_INCOME=CATEGORIES_INCOME,
-                                    CATEGORIES_EXPENSE=CATEGORIES_EXPENSE)
+                                    CATEGORIES_EXPENSE=CATEGORIES_EXPENSE,
+                                    monthyear=monthyear)
 
     @app.route("/add", methods=["POST"])
     def add():
@@ -276,13 +299,32 @@ def create_app(db_path:Path):
         updateCategories();
     });
     </script>
+
+    <script>
+    // Separar año y mes al enviar
+    document.querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        const val = document.getElementById("month").value; // ej: "2025-08"
+        if (val) {
+        const [year, month] = val.split("-");
+        window.location.href = `/?year=${year}&month=${month}`;
+        }
+    });
+    </script>
     </head>
     <body class="px-3">
         
     <div class="container">
-        <div class="row row-cols-1 row-cols-lg-1">
+        <div class="row row-cols-1 row-cols-lg-2">
             <h1>SmartBudget DB</h1>
+            <form method="get" action="/">
+                <label for="month">Selecciona mes:</label>
+                <input type="month" id="month" name="monthyear"
+                    value="{{ monthyear }}">
+                <button type="submit">Ver</button>
+            </form>
         </div>
+
     </div>
     <div class="container-fluid">
         <div class="row g-4 py-5 row-cols-1 row-cols-lg-2">
@@ -322,9 +364,10 @@ def create_app(db_path:Path):
                         <thead>
                             <tr class="table-info">
                                 <th scope="col">Id</th>
-                                <th scope="col">Cuenta</th>
-                                <th scope="col">Banco</th>
-                                <th scope="col">Moneda</th>
+                                <th scope="col">Account</th>
+                                <th scope="col">Bank</th>
+                                <th scope="col">Currency</th>
+                                <th scope="col">Type</th>
                                 <th scope="col">Balance</th>
                             </tr>
                         </thead>
@@ -335,10 +378,28 @@ def create_app(db_path:Path):
                                 <td>{{ b.account.account_number }}</td>
                                 <td>{{ b.account.bank_name }}</td>
                                 <td>{{ b.account.currency }}</td>
+                                <td>{{ b.account.account_type }}</td>
                                 <td>{{ "%.2f"|format(b.balance) }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <th scope="col"></th>
+                                <th scope="col"></th>
+                                <th scope="col"></th>
+                                <th scope="col"></th>
+                                <th scope="col">Total</th>
+                                <th scope="col">
+                                <ul>
+                                {% for currency, total in accounts_total.items() %}
+                                    <li>{{ currency }}: {{ "%.2f"|format(total) }}</li>
+                                {% endfor %}
+                                </ul>
+                                </th>
+                            </tr>
+                            
+                        </tfoot>
                     </table>
                 </div> 
             </div>
