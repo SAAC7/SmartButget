@@ -159,7 +159,7 @@ def create_app(db_path:Path):
         accounts = query_db("SELECT * FROM Accounts", fetch=True)
         balances = {a["id"]: {"account": a, "balance": 0} for a in accounts}
         balances_total = set(r["currency"] for r in accounts)
-        print(balances)
+        # print(balances)
 
 
         # Procesar transacciones normales
@@ -202,6 +202,7 @@ def create_app(db_path:Path):
         resumen, rows = generate_summary(selected_year, selected_month)
         # resumen, rows = generate_summary(datetime.now().year, datetime.now().month)
         balances,total_balances = account_balances()
+        print(resumen)
         return render_template_string(TEMPLATE,
                                     entries=rows,
                                     resumen=resumen,
@@ -340,6 +341,7 @@ def create_app(db_path:Path):
                         <th scope="col">Income From Transfers </th>
                         <th scope="col">Expenses From Transfers</th>
                         <th scope="col">Total</th>
+                        <th scope="col">Dime</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -350,10 +352,55 @@ def create_app(db_path:Path):
                         <td>{{ "{:.2f}".format(resumen[currency]["Total Expenses"]) }}</td>
                         <td>{{ "{:.2f}".format(resumen[currency]["Transfer Income"]) }}</td>
                         <td>{{ "{:.2f}".format(resumen[currency]["Transfer Expenses"]) }} </td>
-                        <td>{{ "{:>10.2f}".format(resumen[currency]["Total Income"]+resumen[currency]["Transfer Income"]-resumen[currency]["Total Expenses"]-resumen[currency]["Transfer Expenses"]) }}</td>
+                        {% set total = resumen[currency]["Total Income"] + resumen[currency]["Transfer Income"]- resumen[currency]["Total Expenses"]- resumen[currency]["Transfer Expenses"] %}
+                        <td>{{ "%.2f"|format(total) }}</td>
+                        {% set dime = resumen[currency]["Total Income"]*0.1 %}
+                        <td>{{ "%.2f"|format(dime) }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
+                    <tfoot>
+
+                    </tfoot>
+                    </table>
+                </div>
+                <div class="w-100">
+                    <h2 class="text-center">Currency Summary</h2>
+                    <table class="table table-striped table-hover w-100">
+                    <thead>
+                    <tr class="table-warning">
+                        <th scope="col">Category</th>
+                        <th scope="col">Currency</th>
+                        <th scope="col">Spent</th>
+                        <th scope="col">Allocated</th>
+                        <th scope="col">Status </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for cat in CATEGORIES_EXPENSE.keys() %}
+                        {% set ncur = resumen|length %}
+                        {% for cur,dic in resumen.items() %}
+                    <tr>
+                        {% if loop.first %}
+                        <th scope="row" rowspan="{{ ncur }}" class="align-middle text-center">{{ cat }}</th>
+                        {% endif %}
+                            <td>{{ cur }}</td>
+                            <td>{{ "{:.2f}".format(dic[cat]) }}</td>
+                            <td>{{ "{:.2f}".format(dic["Alloc_"+cat]) }}</td>
+                            <td>
+                                {% if dic[cat]>dic["Alloc_"+cat] %}
+                                    <span class="text-danger">Exceeded by {{ "{:.2f}".format(dic[cat]-dic["Alloc_"+cat]) }}</span>
+                                {% else %}
+                                    <span class="text-success">Under by {{ "{:.2f}".format(-dic[cat]+dic["Alloc_"+cat]) }}</span>
+                                {% endif %}
+                            </td>
+                    </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+
+                    </tfoot>
                     </table>
                 </div>
             </div>
