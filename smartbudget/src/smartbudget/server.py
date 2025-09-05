@@ -1,7 +1,7 @@
-from flask import Flask, render_template_string, request, redirect
+from flask import Flask, render_template,render_template_string, request, redirect
 import sqlite3, os
 from datetime import datetime
-
+import json
 from pathlib import Path
 import pkg_resources
 
@@ -18,16 +18,20 @@ CATEGORIES_INCOME = {
     'Other Income': {'Phrase': 'Gifts, inheritances, asset sales, prizes'}
 }
 
+def sting_json(any):
+    return json.dumps(any)
+
 def init_db(db_path: Path):
         """Inicializa la base de datos si no existe."""
         with sqlite3.connect(db_path) as conn:
             cur = conn.cursor()
+
             cur.execute("""CREATE TABLE IF NOT EXISTS Accounts(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_number TEXT NOT NULL,
                 bank_name TEXT NOT NULL,
                 account_type TEXT,
-                currency TEXT NOT NULL
+                currency TEXT NOT NULL,
             )""")
             cur.execute("""CREATE TABLE IF NOT EXISTS Transactions(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +41,7 @@ def init_db(db_path: Path):
                 description TEXT,
                 amount REAL NOT NULL,
                 account_id INTEGER NOT NULL,
-                FOREIGN KEY(account_id) REFERENCES Accounts(id)
+                FOREIGN KEY(account_id) REFERENCES Accounts(id),
             )""")
             cur.execute("""CREATE TABLE IF NOT EXISTS Transfers(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,20 +53,26 @@ def init_db(db_path: Path):
                 date TEXT NOT NULL,
                 description TEXT,
                 FOREIGN KEY(from_account) REFERENCES Accounts(id),
-                FOREIGN KEY(to_account) REFERENCES Accounts(id)
+                FOREIGN KEY(to_account) REFERENCES Accounts(id),
             )""")
+
+
             conn.commit()
         print("DB initialized!")
+
+
+
 
 def create_app(db_path:Path):
 
     app = Flask(
     __name__,
     static_folder=str(Path(__file__).parent / "resources" / "static"),
+    template_folder= str(Path(__file__).parent / "resources" / "templates"),
     static_url_path="/static"  # <-- esto asegura que Flask sirva /static/
     )
 
-    print(app.static_folder)
+    # print(app.static_folder)
     app.config["DB_PATH"] = Path(db_path)
     if not Path(db_path).exists():
         init_db(db_path)
@@ -74,7 +84,7 @@ def create_app(db_path:Path):
         conn.row_factory = sqlite3.Row
         if first_time:
             init_db(db_file)  # <-- pasamos el path
-        return conn 
+        return conn
 
 
 
@@ -101,7 +111,7 @@ def create_app(db_path:Path):
         SELECT t.*, a.currency
         FROM Transactions t
         JOIN Accounts a ON t.account_id = a.id
-        
+
         WHERE strftime('%Y', t.date)=? AND strftime('%m', t.date)=?
         """, (str(year), f"{month:02d}"), fetch=True)
 
@@ -132,14 +142,15 @@ def create_app(db_path:Path):
 
             total_income = sum(r["amount"] for r in rows_cur if r["type"] == "Income")
             total_expense = sum(r["amount"] for r in rows_cur if r["type"] == "Expense")
+            dime = (total_income + income_transfers - expense_transfers-sum((r["commission"]) for r in rows_transfer_cur if r["direction"] == "out"))*.1
             resumen = {
                 "Currency": cur,
                 "Total Income": total_income,
                 "Total Expenses": total_expense,
                 "Transfer Income": income_transfers,
-                "Transfer Expenses": expense_transfers
+                "Transfer Expenses": expense_transfers,
+                "Dime":dime
             }
-
             # Calcular por categoría (solo gastos)
             for cat in CATEGORIES_EXPENSE.keys():
                 gasto_cat = sum(
@@ -177,9 +188,11 @@ def create_app(db_path:Path):
 
         totals_by_currency = {}
         for b in balances.values():
-            cur = b["account"]["currency"]
-            totals_by_currency[cur] = totals_by_currency.get(cur, 0) + b["balance"]
-        
+            type_account = b["account"]["account_type"]
+            if "tarjeta" not in type_account.lower() or b["balance"]<0:
+                cur = b["account"]["currency"]
+                totals_by_currency[cur] = totals_by_currency.get(cur, 0) + b["balance"]
+
         return balances, totals_by_currency
 
     # --------------------------
@@ -188,7 +201,7 @@ def create_app(db_path:Path):
     @app.route("/", methods=["GET"])
     def index():
         monthyear = request.args.get("monthyear")
-    
+
         if monthyear:
             # viene en formato "YYYY-MM", lo partimos
             selected_year, selected_month = map(int, monthyear.split("-"))
@@ -202,8 +215,8 @@ def create_app(db_path:Path):
         resumen, rows = generate_summary(selected_year, selected_month)
         # resumen, rows = generate_summary(datetime.now().year, datetime.now().month)
         balances,total_balances = account_balances()
-        print(resumen)
-        return render_template_string(TEMPLATE,
+        # print(resumen)
+        return render_template("menu.html",
                                     entries=rows,
                                     resumen=resumen,
                                     accounts=balances.values(),
@@ -254,302 +267,13 @@ def create_app(db_path:Path):
             query_db("""INSERT INTO Transactions(date,type,category,description,amount,account_id)
                     VALUES(?,?,?,?,?,?)""",
                 (dt_obj.isoformat(), "Expense", "Essential",f"Transfer fee from Account_Id {from_acc} to Account_Id {to_acc}" , commission, from_acc))
-        
+
         return redirect("/")
 
     # --------------------------
     # TEMPLATE reducido
     # --------------------------
-    TEMPLATE = """
-    <!doctype html>
-    <html>
-    <head>
-    <title>SmartBudget DB</title>
-    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
-    <script src="/static/js/bootstrap.bundle.min.js"></script>
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const typeSelect = document.querySelector("select[name='type']");
-        const categorySelect = document.querySelector("select[name='category']");
+    # TEMPLATE = """
 
-        // Categorías pre-cargadas desde Flask (JSON)
-        const categoriesIncome = {{ CATEGORIES_INCOME | tojson }};
-        const categoriesExpense = {{ CATEGORIES_EXPENSE | tojson }};
-
-        function updateCategories() {
-            const type = typeSelect.value;
-            categorySelect.innerHTML = ""; // Limpiar opciones
-
-            let categories;
-            if (type === "Income") {
-                categories = categoriesIncome;
-            } else {
-                categories = categoriesExpense;
-            }
-
-            for (let key in categories) {
-                let option = document.createElement("option");
-                option.value = key;
-                option.textContent = key;
-                categorySelect.appendChild(option);
-            }
-        }
-
-        // Inicializar y escuchar cambios
-        typeSelect.addEventListener("change", updateCategories);
-        updateCategories();
-    });
-    </script>
-
-    <script>
-    // Separar año y mes al enviar
-    document.querySelector("form").addEventListener("submit", function (e) {
-        e.preventDefault();
-        const val = document.getElementById("month").value; // ej: "2025-08"
-        if (val) {
-        const [year, month] = val.split("-");
-        window.location.href = `/?year=${year}&month=${month}`;
-        }
-    });
-    </script>
-    </head>
-    <body class="px-3">
-        
-    <div class="container">
-        <div class="row row-cols-1 row-cols-lg-2">
-            <h1>SmartBudget DB</h1>
-            <form method="get" action="/">
-                <label for="month">Selecciona mes:</label>
-                <input type="month" id="month" name="monthyear"
-                    value="{{ monthyear }}">
-                <button type="submit">Ver</button>
-            </form>
-        </div>
-
-    </div>
-    <div class="container-fluid">
-        <div class="row g-4 py-5 row-cols-1 row-cols-lg-2">
-            <div class="col-lg-6 col-12">
-                <div class="w-100">
-                    <h2 class="text-center">Currency Movements</h2>
-                    <table class="table table-striped table-hover w-100">
-                    <thead>
-                    <tr class="table-danger">
-                        <th scope="col">Currency</th>
-                        <th scope="col">Total Income</th>
-                        <th scope="col">Total Expenses</th>
-                        <th scope="col">Income From Transfers </th>
-                        <th scope="col">Expenses From Transfers</th>
-                        <th scope="col">Total</th>
-                        <th scope="col">Dime</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for currency in resumen.keys() %}
-                    <tr>
-                        <th scope="row">{{ resumen[currency]["Currency"] }}</th>
-                        <td>{{ "{:.2f}".format(resumen[currency]["Total Income"]) }}</td>
-                        <td>{{ "{:.2f}".format(resumen[currency]["Total Expenses"]) }}</td>
-                        <td>{{ "{:.2f}".format(resumen[currency]["Transfer Income"]) }}</td>
-                        <td>{{ "{:.2f}".format(resumen[currency]["Transfer Expenses"]) }} </td>
-                        {% set total = resumen[currency]["Total Income"] + resumen[currency]["Transfer Income"]- resumen[currency]["Total Expenses"]- resumen[currency]["Transfer Expenses"] %}
-                        <td>{{ "%.2f"|format(total) }}</td>
-                        {% set dime = resumen[currency]["Total Income"]*0.1 %}
-                        <td>{{ "%.2f"|format(dime) }}</td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                    <tfoot>
-
-                    </tfoot>
-                    </table>
-                </div>
-                <div class="w-100">
-                    <h2 class="text-center">Currency Summary</h2>
-                    <table class="table table-striped table-hover w-100">
-                    <thead>
-                    <tr class="table-warning">
-                        <th scope="col">Category</th>
-                        <th scope="col">Currency</th>
-                        <th scope="col">Spent</th>
-                        <th scope="col">Allocated</th>
-                        <th scope="col">Status </th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for cat in CATEGORIES_EXPENSE.keys() %}
-                        {% set ncur = resumen|length %}
-                        {% for cur,dic in resumen.items() %}
-                    <tr>
-                        {% if loop.first %}
-                        <th scope="row" rowspan="{{ ncur }}" class="align-middle text-center">{{ cat }}</th>
-                        {% endif %}
-                            <td>{{ cur }}</td>
-                            <td>{{ "{:.2f}".format(dic[cat]) }}</td>
-                            <td>{{ "{:.2f}".format(dic["Alloc_"+cat]) }}</td>
-                            <td>
-                                {% if dic[cat]>dic["Alloc_"+cat] %}
-                                    <span class="text-danger">Exceeded by {{ "{:.2f}".format(dic[cat]-dic["Alloc_"+cat]) }}</span>
-                                {% else %}
-                                    <span class="text-success">Under by {{ "{:.2f}".format(-dic[cat]+dic["Alloc_"+cat]) }}</span>
-                                {% endif %}
-                            </td>
-                    </tr>
-                        {% endfor %}
-                    {% endfor %}
-                    </tbody>
-                    <tfoot>
-
-                    </tfoot>
-                    </table>
-                </div>
-            </div>
-            <div class="col-lg-6 col-12">
-                <div class="w-100">
-                    <h2 class="text-center">Account Balances</h2>
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr class="table-info">
-                                <th scope="col">Id</th>
-                                <th scope="col">Account</th>
-                                <th scope="col">Bank</th>
-                                <th scope="col">Currency</th>
-                                <th scope="col">Type</th>
-                                <th scope="col">Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for b in accounts %}
-                            <tr>
-                                <th scope="row">{{ b.account.id }}</th>
-                                <td>{{ b.account.account_number }}</td>
-                                <td>{{ b.account.bank_name }}</td>
-                                <td>{{ b.account.currency }}</td>
-                                <td>{{ b.account.account_type }}</td>
-                                <td>{{ "%.2f"|format(b.balance) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr class="table-info">
-                                <th scope="col"></th>
-                                <th scope="col"></th>
-                                <th scope="col"></th>
-                                <th scope="col"></th>
-                                <th scope="col">Total</th>
-                                <th scope="col">
-                                <ul>
-                                {% for currency, total in accounts_total.items() %}
-                                    <li>{{ currency }}: {{ "%.2f"|format(total) }}</li>
-                                {% endfor %}
-                                </ul>
-                                </th>
-                            </tr>
-                            
-                        </tfoot>
-                    </table>
-                </div> 
-            </div>
-        </div>
-    </div>
-
-
-    <h2>Add Transaction</h2>
-    <form method="post" action="/add" class="mb-3">
-        <div class="row g-2">
-            <div class="col-md-2">
-                <input type="datetime-local" name="date_in" class="form-control" required>
-            </div>
-            <div class="col-md-1">
-                <select name="type" class="form-select" required>
-                    <option>Income</option>
-                    <option>Expense</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select name="category" class="form-select" required></select>
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="description"  placeholder="Desc" class="form-control">
-            </div>
-            <div class="col-md-1">
-                <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
-            </div>
-            <div class="col-md-1">
-                <input type="number" name="account" placeholder="Account ID" class="form-control" required>
-            </div>
-            <div class="col-md-1">
-                <button class="btn btn-primary w-100">Save</button>
-            </div>
-        </div>
-    </form>
-    
-    <h2>Add Account</h2>
-    <form method="post" action="/add_account" class="mb-3">
-        <div class="row g-2">
-
-        <div class="col-md-3">
-            <input type="text" name="acc_num" placeholder="Número cuenta" class="form-control" required> 
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="bank" placeholder="Banco" class="form-control" required>
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="acc_type" placeholder="Tipo cuenta" class="form-control" required>
-        </div>
-        <div class="col-md-2">
-            <input type="text" name="currency" placeholder="Moneda"  class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <button class="btn btn-secondary w-100">Save</button>
-        </div>
-        </div>
-    </form>
-    
-    <h2>Transfer</h2>
-    <form method="post" action="/transfer" class="mb-3">
-        <div class="row g-2">
-
-        <div class="col-md-2">
-            <input type="datetime-local" name="date_in" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" name="from_account" placeholder="From Account ID" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" name="to_account" placeholder="To Account ID" class="form-control" required>
-        </div>
-        <div class="col-md-2">
-            <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" step="0.01" name="commission" placeholder="Comisión" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" step="0.01" name="exchange_rate" placeholder="Tipo de cambio" value="1" class="form-control" required>
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="description" placeholder="Desc" class="form-control">
-        </div>
-        <div class="col-md-1">
-            <button class="btn btn-success w-100">Transfer</button>
-        </div>
-        </div>
-    </form>
-
-    <h2>Transactions</h2>
-    <table class="table table-striped-columns table-hover">
-    <thead>
-    <tr class="table-primary"><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th>Account</th></tr>
-    </thead>
-    <tbody>
-    {% for e in entries %}
-    <tr><td>{{e.date}}</td><td>{{e.type}}</td><td>{{e.category}}</td><td>{{e.description}}</td><td>{{e.amount}}</td><td>{{e.account_id}}</td></tr>
-    {% endfor %}
-    </tbody>
-    </table>
-
-    </body>
-    </html>
-    """
+    # """
     return app
