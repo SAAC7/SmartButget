@@ -26,12 +26,22 @@ def init_db(db_path: Path):
         with sqlite3.connect(db_path) as conn:
             cur = conn.cursor()
 
+            cur.execute("""CREATE TABLE IF NOT EXISTS Users(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                last name TEXT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
+            )""")
+
             cur.execute("""CREATE TABLE IF NOT EXISTS Accounts(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_number TEXT NOT NULL,
                 bank_name TEXT NOT NULL,
                 account_type TEXT,
                 currency TEXT NOT NULL,
+                user_id INTEGER,
+                FOREIGN KEY(user_id) REFERENCES Users(id),       
             )""")
             cur.execute("""CREATE TABLE IF NOT EXISTS Transactions(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +51,8 @@ def init_db(db_path: Path):
                 description TEXT,
                 amount REAL NOT NULL,
                 account_id INTEGER NOT NULL,
+                user_id INTEGER,
+                FOREIGN KEY(user_id) REFERENCES Users(id),       
                 FOREIGN KEY(account_id) REFERENCES Accounts(id),
             )""")
             cur.execute("""CREATE TABLE IF NOT EXISTS Transfers(
@@ -52,13 +64,36 @@ def init_db(db_path: Path):
                 exchange_rate REAL DEFAULT 1,
                 date TEXT NOT NULL,
                 description TEXT,
+                user_id INTEGER,
+                FOREIGN KEY(user_id) REFERENCES Users(id),       
                 FOREIGN KEY(from_account) REFERENCES Accounts(id),
-                FOREIGN KEY(to_account) REFERENCES Accounts(id),
+                FOREIGN KEY(to_account) REFERENCES Accounts(id),       
             )""")
 
 
             conn.commit()
         print("DB initialized!")
+
+def upgrade(db_path:Path):
+    with sqlite3.connect(db_path) as conn:
+            cur = conn.cursor()
+            cur.execute("""CREATE TABLE IF NOT EXISTS Users(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                last name TEXT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
+            )""")
+            cur.execute(
+                """
+                ALTER TABLE Transfers ADD COLUMN user_id INTEGER,
+                ALTER TABLE Transactions ADD COLUMN user_id INTEGER,
+                ALTER TABLE Accounts ADD COLUMN user_id INTEGER,
+
+                UPDATE  SET
+
+                """
+            )
 
 
 
