@@ -1,0 +1,15 @@
+nav{
+    display: flex;
+    width: 100%;
+    height: auto;
+    justify-content: space-between;
+    margin: 0.7rem;
+    padding: 10px;
+}
+
+section{
+    display: none;
+}
+.active {
+    display: block;
+}

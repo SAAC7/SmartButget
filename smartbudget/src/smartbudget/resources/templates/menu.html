@@ -3,6 +3,7 @@
     <head>
     <title>SmartBudget DB</title>
     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -51,7 +52,7 @@
     </script>
     </head>
     <body class="px-3">
-        
+    <header>
     <div class="container">
         <div class="row row-cols-1 row-cols-lg-2">
             <h1>SmartBudget DB</h1>
@@ -62,7 +63,100 @@
                 <button type="submit">Ver</button>
             </form>
         </div>
-
+    </div>
+    </header>
+    <nav>
+        <a href="#" onclick="showSection('transaction')" class="btn btn-primary btn-lg">Add Transaction</a>
+        <a href="#" onclick="showSection('transfer')" class="btn btn-success btn-lg">Add Transfer</a>
+        <a href="#" onclick="showSection('account')" class="btn btn-secondary btn-lg" >Add Account</a>
+    </nav>
+    <div>
+        <section id="transaction">
+            <h2>Add Transaction</h2>
+            <form method="post" action="/add" class="mb-3">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <input type="datetime-local" name="date_in" class="form-control" required>
+                    </div>
+                    <div class="col-md-1">
+                        <select name="type" class="form-select" required>
+                            <option>Income</option>
+                            <option>Expense</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="category" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" name="description"  placeholder="Desc" class="form-control">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
+                    </div>
+                    <div class="col-md-1">
+                        <input type="number" name="account" placeholder="Account ID" class="form-control" required>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-primary w-100">Save</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+        <section id="account">
+            <h2>Add Account</h2>
+            <form method="post" action="/add_account" class="mb-3">
+                <div class="row g-2">
+        
+                <div class="col-md-3">
+                    <input type="text" name="acc_num" placeholder="Número cuenta" class="form-control" required> 
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="bank" placeholder="Banco" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="acc_type" placeholder="Tipo cuenta" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" name="currency" placeholder="Moneda"  class="form-control" required>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-secondary w-100">Save</button>
+                </div>
+                </div>
+            </form>
+        </section>
+        <section id="transfer">
+            <h2>Add Transfer</h2>
+            <form method="post" action="/transfer" class="mb-3">
+                <div class="row g-2">
+        
+                <div class="col-md-2">
+                    <input type="datetime-local" name="date_in" class="form-control" required>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" name="from_account" placeholder="From Account ID" class="form-control" required>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" name="to_account" placeholder="To Account ID" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" step="0.01" name="commission" placeholder="Comisión" class="form-control" required>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" step="0.01" name="exchange_rate" placeholder="Tipo de cambio" value="1" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="description" placeholder="Desc" class="form-control">
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-success w-100">Transfer</button>
+                </div>
+                </div>
+            </form>
+        </section>
     </div>
     <div class="container-fluid">
         <div class="row g-4 py-5 row-cols-1 row-cols-lg-2">
@@ -107,6 +201,7 @@
                     <tr class="table-warning">
                         <th scope="col">Category</th>
                         <th scope="col">Currency</th>
+                        <th scope="col">Rate</th>
                         <th scope="col">Spent</th>
                         <th scope="col">Allocated</th>
                         <th scope="col">Status </th>
@@ -119,6 +214,7 @@
                     <tr>
                         {% if loop.first %}
                         <th scope="row" rowspan="{{ ncur }}" class="align-middle text-center">{{ cat }}</th>
+                        <th scope="row" rowspan="{{ ncur }}" class="align-middle text-center">{{ CATEGORIES_EXPENSE[cat]["Rate"]*100}} %</th>
                         {% endif %}
                             <td>{{ cur }}</td>
                             <td>{{ "{:.2f}".format(dic[cat]) }}</td>
@@ -188,92 +284,7 @@
             </div>
         </div>
     </div>
-
-
-    <h2>Add Transaction</h2>
-    <form method="post" action="/add" class="mb-3">
-        <div class="row g-2">
-            <div class="col-md-2">
-                <input type="datetime-local" name="date_in" class="form-control" required>
-            </div>
-            <div class="col-md-1">
-                <select name="type" class="form-select" required>
-                    <option>Income</option>
-                    <option>Expense</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select name="category" class="form-select" required></select>
-            </div>
-            <div class="col-md-3">
-                <input type="text" name="description"  placeholder="Desc" class="form-control">
-            </div>
-            <div class="col-md-1">
-                <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
-            </div>
-            <div class="col-md-1">
-                <input type="number" name="account" placeholder="Account ID" class="form-control" required>
-            </div>
-            <div class="col-md-1">
-                <button class="btn btn-primary w-100">Save</button>
-            </div>
-        </div>
-    </form>
-    
-    <h2>Add Account</h2>
-    <form method="post" action="/add_account" class="mb-3">
-        <div class="row g-2">
-
-        <div class="col-md-3">
-            <input type="text" name="acc_num" placeholder="Número cuenta" class="form-control" required> 
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="bank" placeholder="Banco" class="form-control" required>
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="acc_type" placeholder="Tipo cuenta" class="form-control" required>
-        </div>
-        <div class="col-md-2">
-            <input type="text" name="currency" placeholder="Moneda"  class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <button class="btn btn-secondary w-100">Save</button>
-        </div>
-        </div>
-    </form>
-    
-    <h2>Transfer</h2>
-    <form method="post" action="/transfer" class="mb-3">
-        <div class="row g-2">
-
-        <div class="col-md-2">
-            <input type="datetime-local" name="date_in" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" name="from_account" placeholder="From Account ID" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" name="to_account" placeholder="To Account ID" class="form-control" required>
-        </div>
-        <div class="col-md-2">
-            <input type="number" step="0.01" name="amount" placeholder="Amount" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" step="0.01" name="commission" placeholder="Comisión" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <input type="number" step="0.01" name="exchange_rate" placeholder="Tipo de cambio" value="1" class="form-control" required>
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="description" placeholder="Desc" class="form-control">
-        </div>
-        <div class="col-md-1">
-            <button class="btn btn-success w-100">Transfer</button>
-        </div>
-        </div>
-    </form>
-
-    <h2>Transactions</h2>
+    <h2 class="text-center">Transactions</h2>
     <table class="table table-striped-columns table-hover">
     <thead>
     <tr class="table-primary"><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th>Account</th></tr>
@@ -284,6 +295,6 @@
     {% endfor %}
     </tbody>
     </table>
-
+    <script src="/static/js/script.js"></script>
     </body>
     </html>
