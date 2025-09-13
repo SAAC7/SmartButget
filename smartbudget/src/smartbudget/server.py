@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template,render_template_string, request, redirect, session, url_for
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,7 @@ def create_app(db_path:Path):
     template_folder= str(Path(__file__).parent / "resources" / "templates"),
     static_url_path="/static"  # <-- esto asegura que Flask sirva /static/
     )
+    app.secret_key = os.urandom(24)
     backend = SmartBudgetServices(db_path)
     # --------------------------
     # Rutas Flask
@@ -92,13 +94,17 @@ def create_app(db_path:Path):
             
             username = request.form.get("username")
             password = request.form.get("password")
+            name = request.form.get("name")
+            last_name = request.form.get("last_name")
 
-            backend.add_user(username=username,password=password)
+            backend.add_user(name,last_name,username,password)
             user=backend.get_user(username,password)
             version = backend.get_version()
             if version == 1:
-                backend.migrate(user['id'])
-            session["user"] = user
+                user_id=int(user[0]['id'])
+                print(user_id)
+                backend.migrate(user_id)
+            session["user"] = user[0]
             return redirect("/")
         return render_template("setup_user.html")  # plantilla con form usuario/contraseña
 
@@ -108,12 +114,15 @@ def create_app(db_path:Path):
         if request.method == "POST":
             username = request.form.get("username")
             password = request.form.get("password")
-            user = backend.get_user(username,password)
-            if user['id']:
-                session["user"] = user
+            user = backend.get_user(username, password)
+            print(user)
+            
+            if user and len(user) > 0:
+                session["user"] = user[0]
                 return redirect("/")
-            return "Credenciales inválidas", 401
-        return render_template("login.html")
+            else:
+                return render_template("login.html", error="User or Password Invalid")
+        return render_template("login.html")    
     
     @app.route("/logout")
     def logout():
@@ -122,11 +131,11 @@ def create_app(db_path:Path):
 
     @app.before_request
     def check_version_and_auth():
-        version = backend.get_version(db_path)
+        version = backend.get_version()
         if version == 1 and request.endpoint != "setup_user":
             return redirect(url_for("setup_user"))
         if version >= 2:
-            if not session.get("user_id") and request.endpoint not in ("login", "setup_user"):
+            if not session.get("user") and request.endpoint not in ("login", "setup_user"):
                 return redirect(url_for("login"))
 
 

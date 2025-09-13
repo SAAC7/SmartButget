@@ -4,7 +4,7 @@ from datetime import datetime
 import hashlib
 class SmartBudgetServices:
     def __init__(self, db_path:Path):
-        self.db_path = db_path
+        self.db_path = Path(db_path)
         data_access.init_db(self.db_path)
         
     def add_account(self,number,bank,type,currency):
@@ -50,7 +50,7 @@ class SmartBudgetServices:
     
     def get_user(self,username,password):
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-        return data_access.get_user(username,password_hash)
+        return data_access.get_user(self.db_path,username,password_hash)
     
     def get_summary(self,year,month):
         return data_access.generate_summary(self.db_path,year,month)

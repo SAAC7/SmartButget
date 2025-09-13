@@ -39,8 +39,9 @@ def init_db(db_path: Path):
                 account_type TEXT,
                 currency TEXT NOT NULL,
                 user_id INTEGER NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES Users(id),       
+                FOREIGN KEY(user_id) REFERENCES Users(id)       
             )""")
+
             cur.execute("""CREATE TABLE IF NOT EXISTS Transactions(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT NOT NULL,
@@ -52,8 +53,9 @@ def init_db(db_path: Path):
                 user_id INTEGER NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES Users(id), 
                 FOREIGN KEY(user_id) REFERENCES Users(id),       
-                FOREIGN KEY(account_id) REFERENCES Accounts(id),
+                FOREIGN KEY(account_id) REFERENCES Accounts(id)
             )""")
+            
             cur.execute("""CREATE TABLE IF NOT EXISTS Transfers(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 from_account INTEGER NOT NULL,
@@ -66,7 +68,7 @@ def init_db(db_path: Path):
                 user_id INTEGER NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES Users(id),       
                 FOREIGN KEY(from_account) REFERENCES Accounts(id),
-                FOREIGN KEY(to_account) REFERENCES Accounts(id),       
+                FOREIGN KEY(to_account) REFERENCES Accounts(id)     
             )""")
 
 
@@ -76,6 +78,7 @@ def init_db(db_path: Path):
 
         
 def get_connection(db_path:Path):
+        db_path = Path(db_path)
         first_time = not db_path.exists()
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -201,7 +204,8 @@ def add_user(db_path:Path,user):
                     VALUES(?,?,?,?)""", (user["name"], user["last_name"], user["username"], user["password"]))
      
 def get_user(db_path:Path,username,password):
-    return query_db(db_path,"SELECT id,name,last_name,username FROM Users WHERE username=? AND password=?",(username,password))
+    user=query_db(db_path,"SELECT id,name,last_name,username FROM Users WHERE username=? AND password=?",(username,password),fetch=True)
+    return user
 
 def upgrade(db_path:Path,user_id):
     with sqlite3.connect(db_path) as conn:
@@ -212,14 +216,8 @@ def upgrade(db_path:Path,user_id):
         current_version = int(row[0]) if row else 1
         while True:
             if current_version == 1:
-                cur.execute(
-                    """
-                    ALTER TABLE Transfers ADD COLUMN user_id INTEGER,
-                    ALTER TABLE Transactions ADD COLUMN user_id INTEGER,
-                    ALTER TABLE Accounts ADD COLUMN user_id INTEGER,
-                    """
-                    )
                 for table in ["Accounts", "Transactions", "Transfers"]:
+                    cur.execute(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER")
                     cur.execute(f"UPDATE {table} SET user_id=? WHERE user_id IS NULL", (user_id,))
                 current_version = 2
                 cur.execute("INSERT OR REPLACE INTO Meta (key, value) VALUES ('db_version', ?)", (str(current_version),))
