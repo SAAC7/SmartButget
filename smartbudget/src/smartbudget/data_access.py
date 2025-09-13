@@ -27,7 +27,7 @@ def init_db(db_path: Path):
             cur.execute("""CREATE TABLE IF NOT EXISTS Users(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT,
-                last name TEXT,
+                last_name TEXT,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL
             )""")
@@ -38,7 +38,7 @@ def init_db(db_path: Path):
                 bank_name TEXT NOT NULL,
                 account_type TEXT,
                 currency TEXT NOT NULL,
-                user_id INTEGER,
+                user_id INTEGER NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES Users(id),       
             )""")
             cur.execute("""CREATE TABLE IF NOT EXISTS Transactions(
@@ -49,7 +49,8 @@ def init_db(db_path: Path):
                 description TEXT,
                 amount REAL NOT NULL,
                 account_id INTEGER NOT NULL,
-                user_id INTEGER,
+                user_id INTEGER NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES Users(id), 
                 FOREIGN KEY(user_id) REFERENCES Users(id),       
                 FOREIGN KEY(account_id) REFERENCES Accounts(id),
             )""")
@@ -62,7 +63,7 @@ def init_db(db_path: Path):
                 exchange_rate REAL DEFAULT 1,
                 date TEXT NOT NULL,
                 description TEXT,
-                user_id INTEGER,
+                user_id INTEGER NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES Users(id),       
                 FOREIGN KEY(from_account) REFERENCES Accounts(id),
                 FOREIGN KEY(to_account) REFERENCES Accounts(id),       
@@ -72,26 +73,8 @@ def init_db(db_path: Path):
             conn.commit()
         print("DB initialized!")
 
-def upgrade(db_path:Path):
-    with sqlite3.connect(db_path) as conn:
-            cur = conn.cursor()
-            cur.execute("""CREATE TABLE IF NOT EXISTS Users(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                last name TEXT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
-            )""")
-            cur.execute(
-                """
-                ALTER TABLE Transfers ADD COLUMN user_id INTEGER,
-                ALTER TABLE Transactions ADD COLUMN user_id INTEGER,
-                ALTER TABLE Accounts ADD COLUMN user_id INTEGER,
 
-                UPDATE  SET
-
-                """
-            )
+        
 def get_connection(db_path:Path):
         first_time = not db_path.exists()
         conn = sqlite3.connect(db_path)
@@ -112,7 +95,7 @@ def query_db(db_path:Path , query, params=(), fetch=False):
 
 def generate_summary(db_path:Path,year, month):
         # Trae transacciones con la moneda de la cuenta
-        rows = query_db(db_path,"""
+        transactions_rows = query_db(db_path,"""
         SELECT t.*, a.currency
         FROM Transactions t
         JOIN Accounts a ON t.account_id = a.id
@@ -134,12 +117,12 @@ def generate_summary(db_path:Path,year, month):
 
 
         # Agrupar por currency
-        currencies = set(r["currency"] for r in rows)
+        currencies = set(r["currency"] for r in transactions_rows)
         summaries = {}
 
         for cur in currencies:
             # Filtrar solo transacciones de esta moneda
-            rows_cur = [r for r in rows if r["currency"] == cur]
+            rows_cur = [r for r in transactions_rows if r["currency"] == cur]
             rows_transfer_cur = [r for r in transfer_row if r["currency"] == cur]
 
             income_transfers = sum(((r["amount"]-r["commission"])*(r["exchange_rate"]))for r in rows_transfer_cur if r["direction"] == "in")
@@ -168,7 +151,7 @@ def generate_summary(db_path:Path,year, month):
             summaries[cur] = resumen
             summaries = dict(sorted(summaries.items()))
 
-        return summaries, rows
+        return summaries, transactions_rows
 
 
 def account_balances(db_path:Path):
@@ -212,3 +195,42 @@ def add_transaction(db_path:Path,transactions):
 def add_account(db_path:Path,account):
      query_db(db_path,"""INSERT INTO Accounts(account_number,bank_name,account_type,currency)
                     VALUES(?,?,?,?)""", (account["number"], account["bank"], account["type"], account["currency"]))
+     
+def add_user(db_path:Path,user):
+     query_db(db_path,"""INSERT INTO Users(name,last_name,username,password)
+                    VALUES(?,?,?,?)""", (user["name"], user["last_name"], user["username"], user["password"]))
+     
+def get_user(db_path:Path,username,password):
+    return query_db(db_path,"SELECT id,name,last_name,username FROM Users WHERE username=? AND password=?",(username,password))
+
+def upgrade(db_path:Path,user_id):
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS Meta (key TEXT PRIMARY KEY, value TEXT)")
+        cur.execute("SELECT value FROM Meta WHERE key='db_version'")
+        row = cur.fetchone()
+        current_version = int(row[0]) if row else 1
+        while True:
+            if current_version == 1:
+                cur.execute(
+                    """
+                    ALTER TABLE Transfers ADD COLUMN user_id INTEGER,
+                    ALTER TABLE Transactions ADD COLUMN user_id INTEGER,
+                    ALTER TABLE Accounts ADD COLUMN user_id INTEGER,
+                    """
+                    )
+                for table in ["Accounts", "Transactions", "Transfers"]:
+                    cur.execute(f"UPDATE {table} SET user_id=? WHERE user_id IS NULL", (user_id,))
+                current_version = 2
+                cur.execute("INSERT OR REPLACE INTO Meta (key, value) VALUES ('db_version', ?)", (str(current_version),))
+            if current_version ==2:
+                break
+        conn.commit()
+
+def get_db_version(db_path: Path) -> int:
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS Meta (key TEXT PRIMARY KEY, value TEXT)")
+        cur.execute("SELECT value FROM Meta WHERE key='db_version'")
+        row = cur.fetchone()
+        return int(row[0]) if row else 1  # si no existe, asumir versión 1

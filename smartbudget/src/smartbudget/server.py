@@ -1,4 +1,4 @@
-from flask import Flask, render_template,render_template_string, request, redirect
+from flask import Flask, render_template,render_template_string, request, redirect, session, url_for
 from datetime import datetime
 from pathlib import Path
 from .services import SmartBudgetServices
@@ -18,8 +18,11 @@ def create_app(db_path:Path):
     # --------------------------
     @app.route("/", methods=["GET"])
     def index():
+        version=backend.get_version()
+        if version == 1:
+            return redirect("/setup_user")
+        
         monthyear = request.args.get("monthyear")
-
         if monthyear:
             # viene en formato "YYYY-MM", lo partimos
             selected_year, selected_month = map(int, monthyear.split("-"))
@@ -82,11 +85,49 @@ def create_app(db_path:Path):
         backend.add_transfer(from_acc, to_acc, amount, commission, rate, dt_obj.isoformat(), desc)
 
         return redirect("/")
+    
+    @app.route("/setup_user", methods=["GET", "POST"])
+    def setup_user():
+        if request.method == "POST":
+            
+            username = request.form.get("username")
+            password = request.form.get("password")
 
-    # --------------------------
-    # TEMPLATE reducido
-    # --------------------------
-    # TEMPLATE = """
+            backend.add_user(username=username,password=password)
+            user=backend.get_user(username,password)
+            version = backend.get_version()
+            if version == 1:
+                backend.migrate(user['id'])
+            session["user"] = user
+            return redirect("/")
+        return render_template("setup_user.html")  # plantilla con form usuario/contraseña
 
-    # """
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if request.method == "POST":
+            username = request.form.get("username")
+            password = request.form.get("password")
+            user = backend.get_user(username,password)
+            if user['id']:
+                session["user"] = user
+                return redirect("/")
+            return "Credenciales inválidas", 401
+        return render_template("login.html")
+    
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        return redirect("/login")
+
+    @app.before_request
+    def check_version_and_auth():
+        version = backend.get_version(db_path)
+        if version == 1 and request.endpoint != "setup_user":
+            return redirect(url_for("setup_user"))
+        if version >= 2:
+            if not session.get("user_id") and request.endpoint not in ("login", "setup_user"):
+                return redirect(url_for("login"))
+
+
     return app
