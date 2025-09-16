@@ -23,6 +23,15 @@ def create_app(db_path:Path):
         version=backend.get_version()
         if version == 1:
             return redirect("/setup_user")
+              
+        user = session.get("user")
+        if not user:
+            usuario = "Invitado"
+        elif user.get("name"):
+            usuario = " ".join([user.get("name"), user.get("last_name") or ""])
+        else:
+            usuario = user.get("username")
+
         
         monthyear = request.args.get("monthyear")
         if monthyear:
@@ -35,12 +44,13 @@ def create_app(db_path:Path):
             monthyear = f"{selected_year:04d}-{selected_month:02d}"
 
         # Genera el resumen y balances
-        resumen, rows = backend.get_summary(selected_year, selected_month)
+        resumen, rows = backend.get_summary(user["id"],selected_year, selected_month)
         # resumen, rows = generate_summary(datetime.now().year, datetime.now().month)
-        balances,total_balances = backend.get_balances()
+        balances,total_balances = backend.get_balances(user["id"])
 
         # print(resumen)
         return render_template("menu.html",
+                                    usuario = usuario,  
                                     entries=rows,
                                     resumen=resumen,
                                     accounts=balances.values(),
@@ -51,6 +61,7 @@ def create_app(db_path:Path):
 
     @app.route("/add", methods=["POST"])
     def add():
+        user_id = int(session.get("user")["id"])
         tipo = request.form.get("type")
         categoria = request.form.get("category")
         desc = request.form.get("description")
@@ -59,23 +70,25 @@ def create_app(db_path:Path):
         amount = float(request.form.get("amount"))
         account_id = int(request.form.get("account"))
 
-        backend.add_transaction(dt_obj.isoformat(), tipo, categoria, desc, amount, account_id)
+        backend.add_transaction(user_id,dt_obj.isoformat(), tipo, categoria, desc, amount, account_id)
 
         return redirect("/")
 
     @app.route("/add_account", methods=["POST"])
     def add_account():
+        user_id = int(session.get("user")["id"])
         acc_num = request.form.get("acc_num")
         bank = request.form.get("bank")
         acc_type = request.form.get("acc_type")
         currency = request.form.get("currency")
 
-        backend.add_account(acc_num, bank, acc_type, currency)
+        backend.add_account(user_id,acc_num, bank, acc_type, currency,user_id)
 
         return redirect("/")
 
     @app.route("/transfer", methods=["POST"])
     def transfer():
+        user_id = int(session.get("user")["id"])
         from_acc = int(request.form.get("from_account"))
         to_acc = int(request.form.get("to_account"))
         amount = float(request.form.get("amount"))
@@ -84,7 +97,7 @@ def create_app(db_path:Path):
         desc = request.form.get("description")
         dt_obj = datetime.fromisoformat(request.form.get("date_in"))
 
-        backend.add_transfer(from_acc, to_acc, amount, commission, rate, dt_obj.isoformat(), desc)
+        backend.add_transfer(user_id,from_acc, to_acc, amount, commission, rate, dt_obj.isoformat(), desc)
 
         return redirect("/")
     
@@ -102,7 +115,7 @@ def create_app(db_path:Path):
             version = backend.get_version()
             if version == 1:
                 user_id=int(user[0]['id'])
-                print(user_id)
+                # print(user_id)
                 backend.migrate(user_id)
             session["user"] = user[0]
             return redirect("/")

@@ -7,16 +7,18 @@ class SmartBudgetServices:
         self.db_path = Path(db_path)
         data_access.init_db(self.db_path)
         
-    def add_account(self,number,bank,type,currency):
+    def add_account(self,user_id,number,bank,type,currency):
         account={
+            "user_id":user_id,
             "number":number,
             "bank":bank,
             "type":type, 
             "currency":currency
         }
         data_access.add_account(self.db_path ,account)
-    def add_transaction(self,date,type,category,description,amount,account_id):
+    def add_transaction(self,user_id,date,type,category,description,amount,account_id):
         transaction={
+            "user_id":user_id,
             "date":date,
             "type":type,
             "category":category,
@@ -26,8 +28,9 @@ class SmartBudgetServices:
         }
         data_access.add_transaction(self.db_path ,transaction)
 
-    def add_transfer(self,from_account,to_account,amount,commission,rate,date,description):
+    def add_transfer(self,user_id,from_account,to_account,amount,commission,rate,date,description):
         transfer={
+           "user_id":user_id,
            "from_acc":from_account,
            "to_acc":to_account,
            "amount":amount,
@@ -52,11 +55,11 @@ class SmartBudgetServices:
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         return data_access.get_user(self.db_path,username,password_hash)
     
-    def get_summary(self,year,month):
-        return data_access.generate_summary(self.db_path,year,month)
+    def get_summary(self,user_id,year,month):
+        return data_access.generate_summary(self.db_path,user_id,year,month)
     
-    def get_balances(self):
-        return data_access.account_balances(self.db_path)
+    def get_balances(self,user_id):
+        return data_access.account_balances(self.db_path,user_id)
     
     def get_version(self):
         return data_access.get_db_version(self.db_path)
