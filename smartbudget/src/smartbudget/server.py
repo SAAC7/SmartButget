@@ -97,7 +97,7 @@ def create_app(db_path:Path):
         desc = request.form.get("description")
         dt_obj = datetime.fromisoformat(request.form.get("date_in"))
 
-        backend.add_transfer(user_id,from_acc, to_acc, amount, commission, rate, dt_obj.isoformat(), desc)
+        backend.add_transfer(user_id,from_acc, to_acc, amount, commission, rate, dt_obj.isoformat(), str(desc))
 
         return redirect("/")
     

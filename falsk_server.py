@@ -1,8 +1,8 @@
 from smartbudget.src.smartbudget import server
 
 # app = Flask(__name__)
-# DB_FILE = "/home/absar/SmartBudget.db"
-DB_FILE = "/run/media/absar/HOME/absar/SmartBudget.db"
+DB_FILE = "/home/absar/SmartBudget.db"
+# DB_FILE = "/run/media/absar/HOME/absar/SmartBudget.db"
 
 
 

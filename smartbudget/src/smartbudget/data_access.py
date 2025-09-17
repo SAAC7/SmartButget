@@ -185,10 +185,10 @@ def add_transfer(db_path:Path,transfer):
     query_db(db_path,"""INSERT INTO Transfers(from_account,to_account,amount,commission,exchange_rate,date,description,user_id)
                     VALUES(?,?,?,?,?,?,?,?)""",
                 (transfer["from_acc"], transfer["to_acc"],transfer["amount"],transfer["commission"],transfer["rate"],transfer["date"], transfer["description"],transfer["user_id"]))
-    if transfer["commission"]>0:
-        query_db(db_path,"""INSERT INTO Transactions(date,type,category,description,amount,account_id)
-                    VALUES(?,?,?,?,?,?)""",
-                (transfer["desc"],"Expense", "Essential",f"Transfer fee from Account_Id {transfer["from_acc"]} to Account_Id {transfer["to_acc"]}" , transfer["commission"], transfer["from_acc"]))
+    if float(transfer["commission"])>0:
+        query_db(db_path,"""INSERT INTO Transactions(date,type,category,description,amount,account_id,user_id)
+                    VALUES(?,?,?,?,?,?,?)""",
+                (transfer["date"],"Expense", "Essential",f"Transfer fee from Account_Id {transfer["from_acc"]} to Account_Id {transfer["to_acc"]}" , transfer["commission"], transfer["from_acc"],transfer["user_id"]))
         
 def add_transaction(db_path:Path,transactions):
      query_db(db_path,"""INSERT INTO Transactions(date,type,category,description,amount,account_id,user_id)
