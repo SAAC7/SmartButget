@@ -120,7 +120,7 @@ def generate_summary(db_path:Path,user_id,year, month):
 
 
         # Agrupar por currency
-        currencies = set(r["currency"] for r in transactions_rows)
+        currencies = (set(r["currency"] for r in transactions_rows) | set(r["currency"] for r in transfer_row))
         summaries = {}
 
         for cur in currencies:
@@ -133,7 +133,9 @@ def generate_summary(db_path:Path,user_id,year, month):
 
             total_income = sum(r["amount"] for r in rows_cur if r["type"] == "Income")
             total_expense = sum(r["amount"] for r in rows_cur if r["type"] == "Expense")
-            dime = (total_income + income_transfers - expense_transfers-sum((r["commission"]) for r in rows_transfer_cur if r["direction"] == "out"))*.1
+            expense_by_feeds = sum((r["commission"]) for r in rows_transfer_cur if r["direction"] == "out")
+            total_income_by_transfers= total_income + income_transfers - expense_transfers-expense_by_feeds
+            dime = (total_income_by_transfers)*.1
             resumen = {
                 "Currency": cur,
                 "Total Income": total_income,
@@ -147,7 +149,7 @@ def generate_summary(db_path:Path,user_id,year, month):
                 gasto_cat = sum(
                     r['amount'] for r in rows_cur if r['type'] == 'Expense' and r['category'] == cat
                 )
-                asignacion = total_income * CATEGORIES_EXPENSE[cat]['Rate'] if total_income else 0
+                asignacion = total_income_by_transfers * CATEGORIES_EXPENSE[cat]['Rate'] if total_income_by_transfers else 0
                 resumen[cat] = gasto_cat
                 resumen[f'Alloc_{cat}'] = asignacion
 
@@ -231,4 +233,4 @@ def get_db_version(db_path: Path) -> int:
         cur.execute("CREATE TABLE IF NOT EXISTS Meta (key TEXT PRIMARY KEY, value TEXT)")
         cur.execute("SELECT value FROM Meta WHERE key='db_version'")
         row = cur.fetchone()
-        return int(row[0]) if row else 1  # si no existe, asumir versión 1
+        return int(row[0]) if row else 1 
