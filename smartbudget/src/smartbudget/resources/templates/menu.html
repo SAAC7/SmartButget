@@ -5,6 +5,12 @@
     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/styles.css">
     <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.1.2/css/buttons.dataTables.min.css">
+
+
+    
+
     <script>
     document.addEventListener("DOMContentLoaded", function() {
         const typeSelect = document.querySelector("select[name='type']");
@@ -285,7 +291,7 @@
         </div>
     </div>
     <h2 class="text-center">Transactions</h2>
-    <table class="table table-striped-columns table-hover">
+    <table id="example" class="table table-striped table-hover table-bordered">
     <thead>
     <tr class="table-primary"><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th>Account</th></tr>
     </thead>
@@ -295,6 +301,55 @@
     {% endfor %}
     </tbody>
     </table>
+    <!-- SCRIPTS: IMPORTANTE — orden correcto -->
+    <script src="/static/js/jquery-3.7.1.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- DataTables core y Buttons (orden: core -> buttons -> html5) -->
+    <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.1.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.1.2/js/buttons.html5.min.js"></script>
+
+    <!-- Tu script.js (si depende de jQuery, debe ir después de jQuery) -->
     <script src="/static/js/script.js"></script>
+    <script>
+    $(document).ready(function() {
+        $('#example').DataTable( {
+            pageLength: 100,        
+            ordering: true,        
+            searching: true,
+            columnDefs: [
+                {
+                targets: 0, // Primera columna
+                render: function (data, type, row) {
+                    if (type === 'display' || type === 'filter') {
+                    const fecha = new Date(data);
+                    
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const año = fecha.getFullYear();
+                    
+                    const horas = String(fecha.getHours()).padStart(2, '0');
+                    const minutos = String(fecha.getMinutes()).padStart(2, '0');
+                    const segundos = String(fecha.getSeconds()).padStart(2, '0');
+                    
+                    return `${dia}/${mes}/${año} ${horas}:${minutos}:${segundos}`;
+                    }
+                    return data; // mantiene el ISO para ordenación
+                }
+                }
+            ],
+            dom: 'Bfrtip', // agrega la barra de botones
+            buttons: [
+                {
+                extend: 'excelHtml5',
+                text: '📥 Exportar a Excel',
+                title: 'Reporte de transacciones del mes'
+                }
+            ],
+           
+        } );
+    } );
+    </script>
     </body>
     </html>

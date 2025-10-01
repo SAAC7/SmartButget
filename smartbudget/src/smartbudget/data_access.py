@@ -156,7 +156,29 @@ def generate_summary(db_path:Path,user_id,year, month):
             summaries[cur] = resumen
             summaries = dict(sorted(summaries.items()))
 
-        return summaries, transactions_rows
+        merge_rows = []
+        for r in transactions_rows:
+            merge_rows.append({
+            "date": r["date"],
+            "type": r["type"],
+            "description": r.get("description", ""),
+            "category": r.get("category", ""),
+            "amount": r["amount"],
+            "currency": r["currency"],
+            "account_id": r["account_id"],
+        })
+        for r in transfer_row:
+            merge_rows.append({
+            "date": r["date"],
+            "type": f"Transfer-{r['direction']}",  # Transfer-in / Transfer-out
+            "description": r.get("description", ""),
+            "category": "Transfer",
+            "amount": r["amount"],
+            "currency": r["currency"],
+            "account_id": r["from_account"] if r["direction"] == "out" else r["to_account"],
+        })
+
+        return summaries, merge_rows
 
 
 def account_balances(db_path:Path,user_id):
